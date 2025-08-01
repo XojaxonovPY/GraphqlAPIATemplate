@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-o%f0x&n2d2_zje=c%(vmb61y!312yduz=g)-3rdh#jb=^!jx3n
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     # -------graphene-----------
-    'graphene_file_upload',
     "graphene_django",
     'django_filters',
     # -------my app-------------
@@ -84,10 +83,10 @@ WSGI_APPLICATION = 'root.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'test',
+        'NAME': 'postgres',
         'USER': 'postgres',
         'PASSWORD': '1',
-        'HOST': 'localhost',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
