@@ -6,6 +6,7 @@ services:
     build: .
     image: grphql
     container_name: grphql_con
+    restart: always
     command: "sh -c '
     python manage.py makemigrations && 
     python manage.py migrate && 
