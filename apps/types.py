@@ -1,51 +1,55 @@
-from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from graphene import relay, InputObjectType, String, Float, ID, Decimal, Field, Argument
+
+from graphene import relay, InputObjectType, String, Decimal, Field, Argument, Int
 from graphene_django import DjangoObjectType
-
-from apps.filters import ProductEnum
-from apps.models import Category, Product
-
-
-class CategoryType(DjangoObjectType):
-    class Meta:
-        model = Category
-        fields = "__all__"
-        interfaces = (relay.Node,)
-        filter_fields = {
-            "name": ["icontains"]
-        }
+from apps.models import Product, Order, OrderItem,User
 
 
 class ProductType(DjangoObjectType):
     class Meta:
         model = Product
         fields = "__all__"
+        interfaces = (relay.Node,)
 
-    status = Field(ProductEnum)
 
 class UserType(DjangoObjectType):
     class Meta:
         model = User
         fields = '__all__'
-        interfaces = (relay.Node,)
-        filter_fields = {
-            'username': ['icontains','startswith'],
-            'pk':['exact'],
-        }
+
+
+class OrderType(DjangoObjectType):
+    class Meta:
+        model = Order
+        fields = '__all__'
+
+
+class OrderItemType(DjangoObjectType):
+    class Meta:
+        model = OrderItem
+        fields = '__all__'
 
 
 class UserInput(InputObjectType):
-    username = String(required=True)
-    email=String(required=True)
-    password = String(required=True)
+    first_name = String()
+    last_name = String()
+    username = String()
+    age = Int()
+    phone_number = String()
 
-    def clean(self):
-        if len(self.password) <=3:
-            raise ValidationError("Password must be at least 3 characters long")
 
 class ProductInput(InputObjectType):
-    name=String(required=True)
-    price=Decimal(required=True)
-    category=ID(required=True)
-    status = Argument(ProductEnum)
+    name = String()
+    quantity = Int()
+    price = Decimal()
+    image = String()
+
+
+class OrderInput(InputObjectType):
+    user_id = Int()
+    amount = Decimal()
+
+
+class OrderItemInput(InputObjectType):
+    product_id = Int()
+    quantity = Int()
+    order_id = Int()

@@ -1,87 +1,23 @@
 from http import HTTPStatus
-
-from django.contrib.auth.models import User
-from graphene import Mutation, ObjectType, List, Schema, Field, String, ID, Boolean, Int
+from graphene import Mutation, ObjectType, List, Field, String, ID
 from graphene_django.filter import DjangoFilterConnectionField
-from apps.filters import CategoryFilter, UserFilter
-from apps.models import Category, Product
-from apps.types import ProductType, CategoryType, UserType, UserInput, ProductInput
-from graphql_jwt.decorators import login_required
+from apps.filters import ProductFilter
+from apps.models import Product, Order, OrderItem, User
+from apps.types import ProductType, UserType, UserInput, ProductInput, OrderInput, OrderType, OrderItemInput, \
+    OrderItemType
+from graphene.types.generic import GenericScalar
 
 
 class Query(ObjectType):
-    all_categories = DjangoFilterConnectionField(CategoryType, filterset_class=CategoryFilter)
-    all_products = List(ProductType)
-    users_detail = List(UserType, id=Int())
-    one_user = Field(UserType)
-    all_users = DjangoFilterConnectionField(UserType, filterset_class=UserFilter)
-
-    @login_required
-    def resolve_all_categories(self, info, name, first):
-        return Category.objects.all()
-
-    @login_required
-    def resolve_all_products(self, info):
-        return Product.objects.all()
+    all_products = DjangoFilterConnectionField(ProductType, filterset_class=ProductFilter)
+    all_users = List(UserType)
+    all_order_items = List(OrderItemType)
 
     def resolve_all_users(self, info, username=None, pk=None):
         return User.objects.all()
 
-    @login_required
-    def resolve_one_user(self, info):
-        user=info.context.user
-        return user.profile
-    def resolve_users_detail(self, info, id):
-        return User.objects.filter(pk=id)
-
-
-class CreateCategory(Mutation):
-    class Arguments:
-        name = String(required=True)
-
-    category = Field(CategoryType)
-
-    def mutate(self, info, name):
-        category = Category.objects.create(name=name)
-        return CreateCategory(category=category)
-
-
-class UpdateCategory(Mutation):
-    class Arguments:
-        id = ID(required=True)
-        name = String(required=True)
-
-    category = Field(CategoryType)
-
-    def mutate(self, info, id, name=None):
-        category = Category.objects.get(pk=id)
-        category.name = name
-        category.save()
-        return UpdateCategory(category=category)
-
-
-class DeleteCategory(Mutation):
-    class Arguments:
-        id = ID(required=True)
-
-    success = Boolean()
-
-    def mutate(self, info, id):
-        category = Category.objects.filter(id=id).delete()
-        return DeleteCategory(success=True)
-
-
-class FormHello(Mutation):
-    class Arguments:
-        query = String(required=True)
-
-    response = String()
-
-    def mutate(self, into, query):
-        if query == 'hello':
-            return FormHello(response='Salom Graphql')
-        else:
-            return FormHello(response='Notog\'ri soz')
+    def resolve_all_order_items(self, info, username=None, pk=None):
+        return OrderItem.objects.all()
 
 
 class CreateUser(Mutation):
@@ -91,8 +27,7 @@ class CreateUser(Mutation):
     user = Field(UserType)
 
     def mutate(self, info, input):
-        input.clean()
-        user = User.objects.create_user(**input)
+        user = User.objects.create(**input)
         return CreateUser(user=user)
 
 
@@ -128,12 +63,65 @@ class CreateProduct(Mutation):
     product = Field(ProductType)
 
     def mutate(self, info, input):
-        category = Category.objects.get(pk=int(input.category))
-        product = Product.objects.create(
-            name=input.name,
-            price=input.price,
-            category=category,
-            status=input.status.value,
-            # boshqa kerakli fieldlar bo‘lsa shu yerga qo‘shing
-        )
+        product = Product.objects.create(**input)
         return CreateProduct(product=product)
+
+
+class CreateOrder(Mutation):
+    class Arguments:
+        input = OrderInput(required=True)
+
+    order = Field(OrderType)
+
+    def mutate(self, info, input):
+        user=User.objects.filter(pk=input.user_id).first()
+        order = Order.objects.create(user_id=user,amount=input.amount)
+        return CreateOrder(order=order)
+
+
+class DeleteOrder(Mutation):
+    class Arguments:
+        id = ID(required=True)
+
+    success = GenericScalar()
+
+    def mutate(self, info, id):
+        Order.objects.filter(pk=id).delete()
+        return DeleteOrder(success={'message': 'order delete', 'status': 200})
+
+
+class OrderItemCreate(Mutation):
+    class Arguments:
+        input = OrderItemInput(required=True)
+
+    item = Field(OrderItemType)
+
+    def mutate(self, info, input):
+        order=Order.objects.filter(pk=input.order_id).first()
+        product = Product.objects.filter(pk=input.product_id).first()
+        item = OrderItem.objects.create(order_id=order, product_id=product, quantity=input.quantity)
+        return OrderItemCreate(item=item)
+
+
+class OrderItemUpdate(Mutation):
+    class Arguments:
+        id = ID(required=True)
+        input = OrderItemInput(required=True)
+
+    item = Field(OrderItemType)
+
+    def mutate(self, info, id, input):
+        item = OrderItem.objects.filter(id=id)
+        item.update(**input)
+        return OrderItemUpdate(item=item.first())
+
+
+class OrderItemDelete(Mutation):
+    class Arguments:
+        id = ID(required=True)
+
+    success = GenericScalar()
+
+    def mutate(self, info, id):
+        OrderItem.objects.filter(id=id).delete()
+        return OrderItemDelete(success={'message': 'order item delete', 'status': 200})
